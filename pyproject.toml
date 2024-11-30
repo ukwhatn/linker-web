@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "fastapi-template"
+name = "linker-web"
 version = "1.0.0"
 description = "A template for creating a new application"
 authors = ["Yuki Watanabe <ukwhatn@gmail.com>"]
