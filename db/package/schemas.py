@@ -1,24 +1,25 @@
-from datetime import datetime
-
 from pydantic import BaseModel
 
 
-class TemplateBase(BaseModel):
-    name: str
-
-
-class TemplateCreate(TemplateBase):
-    pass
-
-
-class TemplateUpdate(TemplateBase):
-    pass
-
-
-class TemplatePublic(TemplateBase):
+class DiscordAccountSchema(BaseModel):
+    """Discordアカウントのスキーマ"""
     id: int
-    created_at: datetime
-    updated_at: datetime
+    username: str
+    avatar: str
 
-    class Config:
-        orm_mode = True
+
+class WikidotAccountSchema(BaseModel):
+    """Wikidotアカウントのスキーマ"""
+    id: int
+    username: str
+    unixname: str
+
+
+class FlowStartRequestSchema(BaseModel):
+    """FlowStartのリクエスト"""
+    discord: DiscordAccountSchema
+
+
+class FlowStartResponseSchema(BaseModel):
+    """FlowStartのレスポンス"""
+    url: str
