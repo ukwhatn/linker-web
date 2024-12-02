@@ -13,6 +13,15 @@
             margin-right: 8px;
             vertical-align: middle;
         }
+
+        .inactive {
+            opacity: 0.5;
+        }
+
+        .date-info {
+            font-size: 0.8em;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -70,6 +79,10 @@
 </div>
 
 <script>
+    function formatDate(dateStr) {
+        return new Date(dateStr).toLocaleString();
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const apiDomain = localStorage.getItem('api-domain');
         const apiKey = localStorage.getItem('api-key');
@@ -121,34 +134,76 @@
 
     async function unlinkAccounts(discordId, wikidotId) {
         if (confirm('Are you sure you want to unlink these accounts?')) {
-            await makeRequest(`/v1/unlink?discord_id=${discordId}&wikidot_id=${wikidotId}`, 'DELETE');
+            await makeRequest(`/v1/unlink?discord_id=${discordId}&wikidot_id=${wikidotId}`, 'PATCH');
+            await loadDiscordAccounts();
+            await loadWikidotAccounts();
+        }
+    }
+
+    async function relinkAccounts(discordId, wikidotId) {
+        if (confirm('Are you sure you want to reactivate this link?')) {
+            await makeRequest(`/v1/relink?discord_id=${discordId}&wikidot_id=${wikidotId}`, 'PATCH');
             await loadDiscordAccounts();
             await loadWikidotAccounts();
         }
     }
 
     function renderWikidotAccounts(accounts, discordId) {
-        return accounts.map(acc => `
-        <div class="mb-2">
-            <img src="https://www.wikidot.com/avatar.php?userid=${acc.id}" class="avatar" alt="${acc.username}">
-            <a href="https://wikidot.com/user:info/${acc.unixname}" target="_blank">${acc.username}</a>
-            <button class="btn btn-sm btn-danger ms-2" onclick="unlinkAccounts('${discordId}', ${acc.id})">
-                Unlink
-            </button>
-        </div>
-    `).join('');
+        return accounts.map(acc => {
+            const isInactive = acc.unlinked_at !== null;
+            const statusClass = isInactive ? 'inactive' : '';
+            return `
+            <div class="mb-3 ${statusClass}">
+                <div>
+                    <img src="https://www.wikidot.com/avatar.php?userid=${acc.id}" class="avatar" alt="${acc.username}">
+                    <a href="https://wikidot.com/user:info/${acc.unixname}" target="_blank">${acc.username}</a>
+                    ${isInactive ? `
+                        <button class="btn btn-sm btn-success ms-2" onclick="relinkAccounts('${discordId}', ${acc.id})">
+                            Reactivate
+                        </button>
+                    ` : `
+                        <button class="btn btn-sm btn-danger ms-2" onclick="unlinkAccounts('${discordId}', ${acc.id})">
+                            Unlink
+                        </button>
+                    `}
+                </div>
+                <div class="date-info ms-5">
+                    Linked: ${formatDate(acc.created_at)}<br>
+                    Updated: ${formatDate(acc.updated_at)}
+                    ${isInactive ? `<br>Unlinked: ${formatDate(acc.unlinked_at)}` : ''}
+                </div>
+            </div>
+        `;
+        }).join('');
     }
 
     function renderDiscordAccounts(accounts, wikidotId) {
-        return accounts.map(acc => `
-        <div class="mb-2">
-            <img src="${acc.avatar}" class="avatar" alt="${acc.username}">
-            ${acc.username}
-            <button class="btn btn-sm btn-danger ms-2" onclick="unlinkAccounts('${acc.id}', ${wikidotId})">
-                Unlink
-            </button>
-        </div>
-    `).join('');
+        return accounts.map(acc => {
+            const isInactive = acc.unlinked_at !== null;
+            const statusClass = isInactive ? 'inactive' : '';
+            return `
+            <div class="mb-3 ${statusClass}">
+                <div>
+                    <img src="${acc.avatar}" class="avatar" alt="${acc.username}">
+                    ${acc.username}
+                    ${isInactive ? `
+                        <button class="btn btn-sm btn-success ms-2" onclick="relinkAccounts('${acc.id}', ${wikidotId})">
+                            Reactivate
+                        </button>
+                    ` : `
+                        <button class="btn btn-sm btn-danger ms-2" onclick="unlinkAccounts('${acc.id}', ${wikidotId})">
+                            Unlink
+                        </button>
+                    `}
+                </div>
+                <div class="date-info ms-5">
+                    Linked: ${formatDate(acc.created_at)}<br>
+                    Updated: ${formatDate(acc.updated_at)}
+                    ${isInactive ? `<br>Unlinked: ${formatDate(acc.unlinked_at)}` : ''}
+                </div>
+            </div>
+        `;
+        }).join('');
     }
 
     async function loadDiscordAccounts() {

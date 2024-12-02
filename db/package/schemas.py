@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel
 
 
@@ -62,22 +64,47 @@ class AccountListResponseSchema(BaseModel):
     result: dict[str, AccountResponseFromDiscordSchema]
 
 
-class DiscordAccountListSchema(BaseModel):
-    """Discordアカウントのリスト"""
-    result: list[AccountResponseFromDiscordSchema]
+class DiscordAccountSchemaForManage(DiscordAccountSchema):
+    """Discordアカウントの管理用スキーマ"""
+    created_at: datetime
+    updated_at: datetime
+    unlinked_at: datetime | None
 
 
-class WikidotAccountListSchema(BaseModel):
-    """Wikidotアカウントのリスト"""
-    result: list[AccountResponseFromWikidotSchema]
+class WikidotAccountSchemaForManage(AccountResponseWikidotBaseSchema):
+    """Wikidotアカウントの管理用スキーマ"""
+    created_at: datetime
+    updated_at: datetime
+    unlinked_at: datetime | None
 
 
-class UnlinkRequestSchema(BaseModel):
-    """Unlinkのリクエスト"""
+class ListDiscordItemSchema(BaseModel):
+    """Discordアカウントのリストの要素"""
     discord: DiscordAccountSchema
-    wikidot: WikidotAccountSchema
+    wikidot: list[WikidotAccountSchemaForManage]
+
+
+class ListDiscordResponseSchema(BaseModel):
+    """Discordアカウントのリスト"""
+    result: list[ListDiscordItemSchema]
+
+
+class ListWikidotItemSchema(BaseModel):
+    """Wikidotアカウントのリストの要素"""
+    discord: list[DiscordAccountSchemaForManage]
+    wikidot: AccountResponseWikidotBaseSchema
+
+
+class ListWikidotResponseSchema(BaseModel):
+    """Wikidotアカウントのリスト"""
+    result: list[ListWikidotItemSchema]
 
 
 class UnlinkResponseSchema(BaseModel):
     """Unlinkのレスポンス"""
+    result: bool
+
+
+class RelinkResponseSchema(BaseModel):
+    """Relinkのレスポンス"""
     result: bool
