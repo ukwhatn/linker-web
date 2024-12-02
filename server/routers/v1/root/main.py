@@ -78,8 +78,18 @@ def create_code_challenge(
         raise ValueError("invalid code_challenge_method")
 
 
-def check_jp_member(db: Session, client: wikidot.Client, user: WikidotAccount):
-    return IOUtil.update_jp_member(db, client, user)
+def check_jp_member(db: Session, client: wikidot.Client | None, user: WikidotAccount):
+    if client is None:
+        _client = wikidot.Client()
+    else:
+        _client = client
+
+    result = IOUtil.update_jp_member(db, _client, user)
+
+    if client is None:
+        del _client
+
+    return result
 
 
 # define route
@@ -203,7 +213,7 @@ def callback(
     if wikidot_account is None:
         wikidot_account = IOUtil.create_wikidot_account(db, wd_user)
 
-    background_tasks.add_task(check_jp_member, db, wikidot_account)
+    background_tasks.add_task(check_jp_member, db, None, wikidot_account)
 
     link = IOUtil.create_link(db, discord_account, wikidot_account)
 
@@ -245,7 +255,7 @@ async def flow_recheck(
     discord_acc = IOUtil.update_discord_account(db, discord_acc, req_data.discord)
 
     # JPメンバ情報更新
-    wikidot_acc = discord_acc.wikidot_accounts
+    wikidot_acc = [a.wikidot for a in discord_acc.linked_accounts]
 
     # 結果格納用
     results = []
@@ -261,6 +271,10 @@ async def flow_recheck(
             ))
 
     return defined_schemas.FlowRecheckResponseSchema(
-        discord=discord_acc,
+        discord=defined_schemas.DiscordAccountSchema(
+            id=discord_acc.discord_id,
+            username=discord_acc.username,
+            avatar=discord_acc.avatar
+        ),
         wikidot=results
     )
