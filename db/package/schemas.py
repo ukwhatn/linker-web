@@ -50,3 +50,13 @@ class FlowRecheckRequestSchema(BaseModel):
 class FlowRecheckResponseSchema(AccountResponseFromDiscordSchema):
     """FlowRecheckのレスポンス"""
     pass
+
+
+class AccountListRequestSchema(BaseModel):
+    """AccountCheckのリクエスト"""
+    discord_ids: list[int]
+
+
+class AccountListResponseSchema(BaseModel):
+    """AccountCheckのレスポンス"""
+    result: dict[int, AccountResponseFromDiscordSchema]

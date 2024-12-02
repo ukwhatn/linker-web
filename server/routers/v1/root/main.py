@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from db.package import schemas as defined_schemas
 from db.package.models import WikidotAccount
-from db.package.session import db_context
+from db.package.session import db_context, get_db
 from db.package.util import IOUtil
 from util.env import get_env
 
@@ -78,11 +78,14 @@ def create_code_challenge(
         raise ValueError("invalid code_challenge_method")
 
 
-def check_jp_member(db: Session, client: wikidot.Client | None, user: WikidotAccount):
+def check_jp_member(db: Session, client: wikidot.Client | None, user: WikidotAccount | int):
     if client is None:
         _client = wikidot.Client()
     else:
         _client = client
+
+    if isinstance(user, int):
+        user = IOUtil.get_wikidot_account(db, user)
 
     result = IOUtil.update_jp_member(db, _client, user)
 
@@ -90,6 +93,11 @@ def check_jp_member(db: Session, client: wikidot.Client | None, user: WikidotAcc
         del _client
 
     return result
+
+
+def check_jp_member_in_background(user: WikidotAccount | int):
+    with get_db() as _db:
+        return check_jp_member(_db, None, user)
 
 
 # define route
@@ -213,7 +221,7 @@ def callback(
     if wikidot_account is None:
         wikidot_account = IOUtil.create_wikidot_account(db, wd_user)
 
-    background_tasks.add_task(check_jp_member, db, None, wikidot_account)
+    background_tasks.add_task(check_jp_member_in_background, wikidot_account.wikidot_id)
 
     link = IOUtil.create_link(db, discord_account, wikidot_account)
 
@@ -277,4 +285,39 @@ async def flow_recheck(
             avatar=discord_acc.avatar
         ),
         wikidot=results
+    )
+
+
+@router.post("/list", dependencies=[Depends(bearer_scheme)],
+             response_model=defined_schemas.AccountListResponseSchema)
+def account_list(
+        request: Request, response: Response,
+        req_data: defined_schemas.AccountListRequestSchema,
+        db: Session = Depends(db_context)
+):
+    if not check_api_key(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    results = []
+    for discord_id in req_data.discord_ids:
+        discord_acc = IOUtil.get_discord_account(db, discord_id)
+        if discord_acc is None:
+            continue
+
+        results.append(defined_schemas.AccountResponseFromDiscordSchema(
+            discord=defined_schemas.DiscordAccountSchema(
+                id=discord_acc.discord_id,
+                username=discord_acc.username,
+                avatar=discord_acc.avatar
+            ),
+            wikidot=[defined_schemas.AccountResponseWikidotBaseSchema(
+                id=a.wikidot.wikidot_id,
+                username=a.wikidot.username,
+                unixname=a.wikidot.unixname,
+                is_jp_member=a.wikidot.is_jp_member
+            ) for a in discord_acc.linked_accounts]
+        ))
+
+    return defined_schemas.AccountListResponseSchema(
+        result={r.discord.id: r for r in results}
     )
