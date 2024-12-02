@@ -23,7 +23,7 @@ app_params = {}
 if env_mode == "development":
     logger.setLevel(level=logging.DEBUG)
 elif env_mode == "production":
-    logger.setLevel(level=logging.INFO)
+    logger.setLevel(level=logging.WARNING)
     app_params["docs_url"] = None
     app_params["redoc_url"] = None
     app_params["openapi_url"] = None
