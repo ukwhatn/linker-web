@@ -36,14 +36,11 @@ class DiscordAccount(Base):
     )
 
     # Relationships
-    linked_accounts: Mapped[list["LinkedAccount"]] = relationship(back_populates="discord")
-    link_request_tokens: Mapped[list["LinkRequestToken"]] = relationship(back_populates="discord")
-
-    wikidot_accounts: Mapped[list["WikidotAccount"]] = relationship(
-        secondary="linked_accounts",
-        back_populates="discord_accounts",
-        primaryjoin="DiscordAccount.discord_id==LinkedAccount.discord_id",
-        secondaryjoin="LinkedAccount.wikidot_id==WikidotAccount.wikidot_id"
+    linked_accounts: Mapped[list["LinkedAccount"]] = relationship(
+        back_populates="discord"
+    )
+    link_request_tokens: Mapped[list["LinkRequestToken"]] = relationship(
+        back_populates="discord"
     )
 
 
@@ -79,13 +76,8 @@ class WikidotAccount(Base):
     )
 
     # Relationships
-    linked_accounts: Mapped[list["LinkedAccount"]] = relationship(back_populates="wikidot")
-
-    discord_accounts: Mapped[list["DiscordAccount"]] = relationship(
-        secondary="linked_accounts",
-        back_populates="wikidot_accounts",
-        primaryjoin="WikidotAccount.wikidot_id==LinkedAccount.wikidot_id",
-        secondaryjoin="LinkedAccount.discord_id==DiscordAccount.discord_id"
+    linked_accounts: Mapped[list["LinkedAccount"]] = relationship(
+        back_populates="wikidot"
     )
 
 
@@ -116,8 +108,12 @@ class LinkedAccount(Base):
         onupdate=text("now()")
     )
 
-    discord: Mapped["DiscordAccount"] = relationship(back_populates="linked_accounts")
-    wikidot: Mapped["WikidotAccount"] = relationship(back_populates="linked_accounts")
+    discord: Mapped["DiscordAccount"] = relationship(
+        back_populates="linked_accounts"
+    )
+    wikidot: Mapped["WikidotAccount"] = relationship(
+        back_populates="linked_accounts"
+    )
 
 
 class LinkRequestToken(Base):
