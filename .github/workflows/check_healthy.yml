@@ -24,7 +24,7 @@ jobs:
         
         for i in $(seq 1 $max_retries)
         do
-          if ! make ps | grep -q "health: starting"; then
+          if ! make ps | grep -qE "(health: starting|Restarting)"; then
             echo "All services have finished starting!"
             break
           else

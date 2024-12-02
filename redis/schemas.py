@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 
+from db.package.schemas import DiscordAccountSchema
+
 
 @dataclass
 class SessionSchema:
-    data: any = None
+    auth: any = None

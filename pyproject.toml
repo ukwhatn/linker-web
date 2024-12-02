@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "fastapi-template"
+name = "linker-web"
 version = "1.0.0"
 description = "A template for creating a new application"
 authors = ["Yuki Watanabe <ukwhatn@gmail.com>"]
@@ -13,6 +13,8 @@ optional = true
 [tool.poetry.group.server.dependencies]
 redis = "^5.0.8"
 fastapi = {extras = ["standard"], version = "^0.115.0"}
+wikidot = "3.1.0.dev8"
+jinja2 = "^3.1.4"
 
 [tool.poetry.group.dev]
 optional = true
