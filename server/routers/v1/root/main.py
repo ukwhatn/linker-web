@@ -321,3 +321,81 @@ def account_list(
     return defined_schemas.AccountListResponseSchema(
         result={r.discord.id: r for r in results}
     )
+
+
+@router.get("/list/discord", response_model=defined_schemas.DiscordAccountListSchema)
+def discord_account_list(
+        request: Request, response: Response,
+        db: Session = Depends(db_context)
+):
+    if not check_api_key(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    discord_accounts = IOUtil.get_discord_accounts(db)
+
+    result = []
+
+    for acc in discord_accounts:
+        result.append(defined_schemas.AccountResponseFromDiscordSchema(
+            discord=defined_schemas.DiscordAccountSchema(
+                id=str(acc.discord_id),
+                username=acc.username,
+                avatar=acc.avatar
+            ),
+            wikidot=[defined_schemas.AccountResponseWikidotBaseSchema(
+                id=a.wikidot.wikidot_id,
+                username=a.wikidot.username,
+                unixname=a.wikidot.unixname,
+                is_jp_member=a.wikidot.is_jp_member
+            ) for a in acc.linked_accounts]
+        ))
+
+    return defined_schemas.DiscordAccountListSchema(
+        result=result
+    )
+
+
+@router.get("/list/wikidot", response_model=defined_schemas.WikidotAccountListSchema)
+def wikidot_account_list(
+        request: Request, response: Response,
+        db: Session = Depends(db_context)
+):
+    if not check_api_key(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    wikidot_accounts = IOUtil.get_wikidot_accounts(db)
+
+    result = []
+
+    for acc in wikidot_accounts:
+        result.append(defined_schemas.AccountResponseFromWikidotSchema(
+            discord=[defined_schemas.DiscordAccountSchema(
+                id=a.discord.discord_id,
+                username=a.discord.username,
+                avatar=a.discord.avatar
+            ) for a in acc.linked_accounts],
+            wikidot=defined_schemas.AccountResponseWikidotBaseSchema(
+                id=acc.wikidot_id,
+                username=acc.username,
+                unixname=acc.unixname,
+                is_jp_member=acc.is_jp_member
+            )
+        ))
+
+    return defined_schemas.WikidotAccountListSchema(
+        result=result
+    )
+
+
+@router.delete("/unlink", dependencies=[Depends(bearer_scheme)])
+def unlink(
+        request: Request, response: Response,
+        discord_id: int, wikidot_id: int,
+        db: Session = Depends(db_context)
+):
+    if not check_api_key(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    IOUtil.unlink(db, discord_id, wikidot_id)
+
+    return response

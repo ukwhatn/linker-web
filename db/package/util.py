@@ -107,3 +107,20 @@ class IOUtil:
         db.refresh(user)
 
         return user
+
+    @staticmethod
+    def get_discord_accounts(db: Session):
+        return db.execute(select(DiscordAccount)).scalars().all()
+
+    @staticmethod
+    def get_wikidot_accounts(db: Session):
+        return db.execute(select(WikidotAccount)).scalars().all()
+
+    @staticmethod
+    def unlink(db: Session, discord_id: int, wikidot_id: int):
+        db.execute(LinkedAccount.delete().where(
+            LinkedAccount.discord_id == discord_id,
+            LinkedAccount.wikidot_id == wikidot_id
+        ))
+        db.commit()
+        return True

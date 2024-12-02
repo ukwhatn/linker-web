@@ -60,3 +60,24 @@ class AccountListRequestSchema(BaseModel):
 class AccountListResponseSchema(BaseModel):
     """AccountCheckのレスポンス"""
     result: dict[str, AccountResponseFromDiscordSchema]
+
+
+class DiscordAccountListSchema(BaseModel):
+    """Discordアカウントのリスト"""
+    result: list[AccountResponseFromDiscordSchema]
+
+
+class WikidotAccountListSchema(BaseModel):
+    """Wikidotアカウントのリスト"""
+    result: list[AccountResponseFromWikidotSchema]
+
+
+class UnlinkRequestSchema(BaseModel):
+    """Unlinkのリクエスト"""
+    discord: DiscordAccountSchema
+    wikidot: WikidotAccountSchema
+
+
+class UnlinkResponseSchema(BaseModel):
+    """Unlinkのレスポンス"""
+    result: bool
