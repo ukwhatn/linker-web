@@ -102,14 +102,8 @@ class IOUtil:
     @staticmethod
     def update_jp_member(db: Session, client: wikidot.Client, user: WikidotAccount) -> WikidotAccount:
         site = client.site.get("scp-jp")
-        is_member = site.member_lookup(user.username, user.wikidot_id)
-        if is_member:
-            user.is_jp_member = True
-            db.commit()
-        else:
-            user.is_jp_member = False
-            db.commit()
-
+        user.is_jp_member = site.member_lookup(user.username, user.wikidot_id)
+        db.commit()
         db.refresh(user)
 
         return user
