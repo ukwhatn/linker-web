@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Link Management</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+<div class="container mx-auto py-5">
+    <h3 class="border-bottom pb-1">Account Link Management</h3>
+
+    <h4 class="mt-5">Settings</h4>
+    <div class="mb-3">
+        <label class="form-label">API Domain</label>
+        <div class="input-group">
+            <input type="text" class="form-control" id="api-domain-input" placeholder="Enter API domain">
+            <button class="btn btn-outline-secondary" onclick="handleApiDomainSave()">Save</button>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label">API Key</label>
+        <div class="input-group">
+            <input type="text" class="form-control" id="api-key-input" placeholder="Enter API key">
+            <button class="btn btn-outline-secondary" onclick="handleApiKeySave()">Save</button>
+        </div>
+    </div>
+
+    <div class="mt-5">
+        <button class="btn btn-primary me-2" onclick="loadDiscordAccounts()">Load Discord View</button>
+        <button class="btn btn-primary" onclick="loadWikidotAccounts()">Load Wikidot View</button>
+    </div>
+
+    <h4 class="mt-5">Discord View</h4>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Discord User</th>
+                <th>Linked Wikidot Accounts</th>
+            </tr>
+            </thead>
+            <tbody id="discord-table"></tbody>
+        </table>
+    </div>
+
+    <h4 class="mt-5">Wikidot View</h4>
+    <div class="table-responsive">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>Wikidot User</th>
+                <th>Unix Name</th>
+                <th>JP Member</th>
+                <th>Linked Discord Accounts</th>
+            </tr>
+            </thead>
+            <tbody id="wikidot-table"></tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const apiDomain = localStorage.getItem('api-domain');
+        const apiKey = localStorage.getItem('api-key');
+
+        if (apiDomain) document.getElementById('api-domain-input').value = apiDomain;
+        if (apiKey) document.getElementById('api-key-input').value = apiKey;
+    });
+
+    function handleApiDomainSave() {
+        const domain = document.getElementById('api-domain-input').value;
+        localStorage.setItem('api-domain', domain);
+        alert('API Domain saved');
+    }
+
+    function handleApiKeySave() {
+        const key = document.getElementById('api-key-input').value;
+        localStorage.setItem('api-key', key);
+        alert('API Key saved');
+    }
+
+    async function makeRequest(endpoint, method = 'GET', body = null) {
+        const domain = localStorage.getItem('api-domain');
+        const apiKey = localStorage.getItem('api-key');
+
+        if (!domain || !apiKey) {
+            alert('Please set API domain and key first');
+            return null;
+        }
+
+        const options = {
+            method,
+            headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json'
+            }
+        };
+        if (body) options.body = JSON.stringify(body);
+
+        try {
+            const response = await fetch(`${domain}${endpoint}`, options);
+            if (!response.ok) throw new Error(`HTTP error: ${response.status}`);
+            return await response.json();
+        } catch (error) {
+            console.error('API error:', error);
+            alert('API request failed');
+            return null;
+        }
+    }
+
+    async function unlinkAccounts(discordId, wikidotId) {
+        if (confirm('Are you sure you want to unlink these accounts?')) {
+            await makeRequest(`/v1/unlink?discord_id=${discordId}&wikidot_id=${wikidotId}`, 'DELETE');
+            await loadDiscordAccounts();
+            await loadWikidotAccounts();
+        }
+    }
+
+    function renderWikidotAccounts(accounts, discordId) {
+        return accounts.map(acc => `
+        <div class="mb-2">
+            <img src="https://www.wikidot.com/avatar.php?userid=${acc.id}" class="avatar" alt="${acc.username}">
+            <a href="https://wikidot.com/user:info/${acc.unixname}" target="_blank">${acc.username}</a>
+            <button class="btn btn-sm btn-danger ms-2" onclick="unlinkAccounts('${discordId}', ${acc.id})">
+                Unlink
+            </button>
+        </div>
+    `).join('');
+    }
+
+    function renderDiscordAccounts(accounts, wikidotId) {
+        return accounts.map(acc => `
+        <div class="mb-2">
+            <img src="${acc.avatar}" class="avatar" alt="${acc.username}">
+            ${acc.username}
+            <button class="btn btn-sm btn-danger ms-2" onclick="unlinkAccounts('${acc.id}', ${wikidotId})">
+                Unlink
+            </button>
+        </div>
+    `).join('');
+    }
+
+    async function loadDiscordAccounts() {
+        const data = await makeRequest('/v1/list/discord');
+        if (!data) return;
+
+        const tbody = document.getElementById('discord-table');
+        tbody.innerHTML = data.result.map(item => `
+        <tr>
+            <td>
+                <img src="${item.discord.avatar}" class="avatar" alt="${item.discord.username}">
+                ${item.discord.username}
+                <div class="text-muted small">ID: ${item.discord.id}</div>
+            </td>
+            <td>${renderWikidotAccounts(item.wikidot, item.discord.id)}</td>
+        </tr>
+    `).join('');
+    }
+
+    async function loadWikidotAccounts() {
+        const data = await makeRequest('/v1/list/wikidot');
+        if (!data) return;
+
+        const tbody = document.getElementById('wikidot-table');
+        tbody.innerHTML = data.result.map(item => `
+        <tr>
+            <td>
+                <img src="https://www.wikidot.com/avatar.php?userid=${item.wikidot.id}" class="avatar" alt="${item.wikidot.username}">
+                <a href="https://wikidot.com/user:info/${item.wikidot.unixname}" target="_blank">${item.wikidot.username}</a>
+                <div class="text-muted small">ID: ${item.wikidot.id}</div>
+            </td>
+            <td>${item.wikidot.unixname}</td>
+            <td>${item.wikidot.is_jp_member ? 'Yes' : 'No'}</td>
+            <td>${renderDiscordAccounts(item.discord, item.wikidot.id)}</td>
+        </tr>
+    `).join('');
+    }
+</script>
+</body>
+</html>
