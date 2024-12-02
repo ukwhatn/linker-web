@@ -84,8 +84,8 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const apiDomain = localStorage.getItem('api-domain');
-        const apiKey = localStorage.getItem('api-key');
+        const apiDomain = localStorage.getItem('LinkerManagement:api-domain');
+        const apiKey = localStorage.getItem('LinkerManagement:api-key');
 
         if (apiDomain) document.getElementById('api-domain-input').value = apiDomain;
         if (apiKey) document.getElementById('api-key-input').value = apiKey;
@@ -93,19 +93,19 @@
 
     function handleApiDomainSave() {
         const domain = document.getElementById('api-domain-input').value;
-        localStorage.setItem('api-domain', domain);
+        localStorage.setItem('LinkerManagement:api-domain', domain);
         alert('API Domain saved');
     }
 
     function handleApiKeySave() {
         const key = document.getElementById('api-key-input').value;
-        localStorage.setItem('api-key', key);
+        localStorage.setItem('LinkerManagement:api-key', key);
         alert('API Key saved');
     }
 
     async function makeRequest(endpoint, method = 'GET', body = null) {
-        const domain = localStorage.getItem('api-domain');
-        const apiKey = localStorage.getItem('api-key');
+        const domain = localStorage.getItem('LinkerManagement:api-domain');
+        const apiKey = localStorage.getItem('LinkerManagement:api-key');
 
         if (!domain || !apiKey) {
             alert('Please set API domain and key first');
