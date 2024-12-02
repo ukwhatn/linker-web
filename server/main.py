@@ -18,12 +18,21 @@ env_mode = get_env("ENV_MODE", "production")
 logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger("uvicorn")
 
+
+# /system/healthcheckのログを表示しない
+class HealthCheckFilter(logging.Filter):
+    def filter(self, record):
+        return "/system/healthcheck" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(HealthCheckFilter())
+
 # production時，docsを表示しない
 app_params = {}
 if env_mode == "development":
     logger.setLevel(level=logging.DEBUG)
 elif env_mode == "production":
-    logger.setLevel(level=logging.WARNING)
+    logger.setLevel(level=logging.INFO)
     app_params["docs_url"] = None
     app_params["redoc_url"] = None
     app_params["openapi_url"] = None
