@@ -263,7 +263,7 @@ async def flow_recheck(
     discord_acc = IOUtil.update_discord_account(db, discord_acc, req_data.discord)
 
     # JPメンバ情報更新
-    wikidot_acc = [a.wikidot for a in discord_acc.linked_accounts]
+    wikidot_acc = [a.wikidot for a in discord_acc.get_linked_accounts()]
 
     # 結果格納用
     results = []
@@ -315,9 +315,113 @@ def account_list(
                 username=a.wikidot.username,
                 unixname=a.wikidot.unixname,
                 is_jp_member=a.wikidot.is_jp_member
-            ) for a in discord_acc.linked_accounts]
+            ) for a in discord_acc.get_linked_accounts()]
         ))
 
     return defined_schemas.AccountListResponseSchema(
         result={r.discord.id: r for r in results}
+    )
+
+
+@router.get("/list/discord", dependencies=[Depends(bearer_scheme)],
+            response_model=defined_schemas.ListDiscordResponseSchema)
+def discord_account_list(
+        request: Request, response: Response,
+        db: Session = Depends(db_context)
+):
+    if not check_api_key(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    discord_accounts = IOUtil.get_discord_accounts(db)
+
+    result = []
+
+    for acc in discord_accounts:
+        result.append(defined_schemas.ListDiscordItemSchema(
+            discord=defined_schemas.DiscordAccountSchema(
+                id=str(acc.discord_id),
+                username=acc.username,
+                avatar=acc.avatar
+            ),
+            wikidot=[defined_schemas.WikidotAccountSchemaForManage(
+                id=a.wikidot.wikidot_id,
+                username=a.wikidot.username,
+                unixname=a.wikidot.unixname,
+                is_jp_member=a.wikidot.is_jp_member,
+                unlinked_at=a.unlinked_at,
+                created_at=a.created_at,
+                updated_at=a.updated_at
+            ) for a in acc.get_linked_accounts(include_unlinked=True)]
+        ))
+
+    return defined_schemas.ListDiscordResponseSchema(
+        result=result
+    )
+
+
+@router.get("/list/wikidot", dependencies=[Depends(bearer_scheme)],
+            response_model=defined_schemas.ListWikidotResponseSchema)
+def wikidot_account_list(
+        request: Request, response: Response,
+        db: Session = Depends(db_context)
+):
+    if not check_api_key(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    wikidot_accounts = IOUtil.get_wikidot_accounts(db)
+
+    result = []
+
+    for acc in wikidot_accounts:
+        result.append(defined_schemas.ListWikidotItemSchema(
+            discord=[defined_schemas.DiscordAccountSchemaForManage(
+                id=str(a.discord.discord_id),
+                username=a.discord.username,
+                avatar=a.discord.avatar,
+                unlinked_at=a.unlinked_at,
+                created_at=a.created_at,
+                updated_at=a.updated_at
+            ) for a in acc.get_linked_accounts(include_unlinked=True)],
+            wikidot=defined_schemas.AccountResponseWikidotBaseSchema(
+                id=acc.wikidot_id,
+                username=acc.username,
+                unixname=acc.unixname,
+                is_jp_member=acc.is_jp_member
+            )
+        ))
+
+    return defined_schemas.ListWikidotResponseSchema(
+        result=result
+    )
+
+
+@router.patch("/unlink", dependencies=[Depends(bearer_scheme)])
+def unlink(
+        request: Request, response: Response,
+        discord_id: int, wikidot_id: int,
+        db: Session = Depends(db_context)
+):
+    if not check_api_key(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    result = IOUtil.unlink(db, discord_id, wikidot_id)
+
+    return defined_schemas.UnlinkResponseSchema(
+        result=result
+    )
+
+
+@router.patch("/relink", dependencies=[Depends(bearer_scheme)])
+def relink(
+        request: Request, response: Response,
+        discord_id: int, wikidot_id: int,
+        db: Session = Depends(db_context)
+):
+    if not check_api_key(request):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    result = IOUtil.relink(db, discord_id, wikidot_id)
+
+    return defined_schemas.RelinkResponseSchema(
+        result=result
     )

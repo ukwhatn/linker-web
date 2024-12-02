@@ -59,7 +59,12 @@ class IOUtil:
             LinkedAccount.wikidot_id == wd_acc.wikidot_id
         )).scalars().first()
         if link is not None:
-            return None
+            if link.unlinked_at is None:
+                return None
+            link.unlinked_at = None
+            db.commit()
+            db.refresh(link)
+            return link
 
         link = LinkedAccount(
             discord=dc_acc,
@@ -107,3 +112,40 @@ class IOUtil:
         db.refresh(user)
 
         return user
+
+    @staticmethod
+    def get_discord_accounts(db: Session):
+        return db.execute(select(DiscordAccount)).scalars().all()
+
+    @staticmethod
+    def get_wikidot_accounts(db: Session):
+        return db.execute(select(WikidotAccount)).scalars().all()
+
+    @staticmethod
+    def unlink(db: Session, discord_id: int, wikidot_id: int):
+        target = db.execute(select(LinkedAccount).where(
+            LinkedAccount.discord_id == discord_id,
+            LinkedAccount.wikidot_id == wikidot_id
+        )).scalars().first()
+
+        if target is None:
+            return False
+
+        target.unlinked_at = datetime.now()
+        db.commit()
+        return True
+
+    @staticmethod
+    def relink(db: Session, discord_id: int, wikidot_id: int):
+        target = db.execute(select(LinkedAccount).where(
+            LinkedAccount.discord_id == discord_id,
+            LinkedAccount.wikidot_id == wikidot_id,
+            LinkedAccount.unlinked_at != None
+        )).scalars().first()
+
+        if target is None:
+            return False
+
+        target.unlinked_at = None
+        db.commit()
+        return True

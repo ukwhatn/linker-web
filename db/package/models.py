@@ -43,6 +43,12 @@ class DiscordAccount(Base):
         back_populates="discord"
     )
 
+    # method
+    def get_linked_accounts(self, include_unlinked: bool = False) -> list["LinkedAccount"]:
+        if include_unlinked:
+            return self.linked_accounts
+        return [link for link in self.linked_accounts if link.unlinked_at is None]
+
 
 class WikidotAccount(Base):
     __tablename__ = "wikidot_accounts"
@@ -80,6 +86,12 @@ class WikidotAccount(Base):
         back_populates="wikidot"
     )
 
+    # method
+    def get_linked_accounts(self, include_unlinked: bool = False) -> list["LinkedAccount"]:
+        if include_unlinked:
+            return self.linked_accounts
+        return [link for link in self.linked_accounts if link.unlinked_at is None]
+
 
 class LinkedAccount(Base):
     __tablename__ = "linked_accounts"
@@ -106,6 +118,12 @@ class LinkedAccount(Base):
         DateTime(timezone=True),
         server_default=text("now()"),
         onupdate=text("now()")
+    )
+
+    unlinked_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        server_default=None
     )
 
     discord: Mapped["DiscordAccount"] = relationship(

@@ -2,6 +2,7 @@ import json
 import logging
 
 from fastapi import FastAPI, Request, Response, Depends
+from fastapi.middleware.cors import CORSMiddleware
 
 from db.package.session import get_db
 from redis_crud import SessionCrud
@@ -30,18 +31,18 @@ elif env_mode == "production":
 # create app
 app = FastAPI(**app_params)
 
+origins = [
+    "https://scp-jp.github.com",
+]
 
-# origins = [
-#     "http://example.com",
-# ]
-#
-# app.add_middleware(
-#     CORSMiddleware,
-#     allow_origins=origins,
-#     allow_credentials=True,
-#     allow_methods=["*"],
-#     allow_headers=["*"],
-# )
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"] if env_mode == "development" else origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 @app.middleware("http")
 def error_response(request: Request, call_next):
