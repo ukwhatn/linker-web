@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Integer, String, DateTime, ForeignKey, BigInteger
+from sqlalchemy import Integer, String, DateTime, ForeignKey, BigInteger, Boolean
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import text
 
@@ -35,9 +35,16 @@ class DiscordAccount(Base):
         onupdate=text("now()")
     )
 
-    # Add a relationship to the LinkedAccount model
+    # Relationships
     linked_accounts: Mapped[list["LinkedAccount"]] = relationship(back_populates="discord")
     link_request_tokens: Mapped[list["LinkRequestToken"]] = relationship(back_populates="discord")
+
+    wikidot_accounts: Mapped[list["WikidotAccount"]] = relationship(
+        secondary="linked_accounts",
+        back_populates="discord_accounts",
+        primaryjoin="DiscordAccount.discord_id==LinkedAccount.discord_id",
+        secondaryjoin="LinkedAccount.wikidot_id==WikidotAccount.wikidot_id"
+    )
 
 
 class WikidotAccount(Base):
@@ -57,6 +64,10 @@ class WikidotAccount(Base):
     unixname: Mapped[str] = mapped_column(
         String(255)
     )
+    is_jp_member: Mapped[bool] = mapped_column(
+        Boolean,
+        server_default=text("false")
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         server_default=text("now()")
@@ -67,8 +78,15 @@ class WikidotAccount(Base):
         onupdate=text("now()")
     )
 
-    # Add a relationship to the LinkedAccount model
+    # Relationships
     linked_accounts: Mapped[list["LinkedAccount"]] = relationship(back_populates="wikidot")
+
+    discord_accounts: Mapped[list["DiscordAccount"]] = relationship(
+        secondary="linked_accounts",
+        back_populates="wikidot_accounts",
+        primaryjoin="WikidotAccount.wikidot_id==LinkedAccount.wikidot_id",
+        secondaryjoin="LinkedAccount.discord_id==DiscordAccount.discord_id"
+    )
 
 
 class LinkedAccount(Base):
@@ -98,8 +116,8 @@ class LinkedAccount(Base):
         onupdate=text("now()")
     )
 
-    discord: Mapped["DiscordAccount"] = relationship("DiscordAccount")
-    wikidot: Mapped["WikidotAccount"] = relationship("WikidotAccount")
+    discord: Mapped["DiscordAccount"] = relationship(back_populates="linked_accounts")
+    wikidot: Mapped["WikidotAccount"] = relationship(back_populates="linked_accounts")
 
 
 class LinkRequestToken(Base):
@@ -128,4 +146,4 @@ class LinkRequestToken(Base):
         onupdate=text("now()")
     )
 
-    discord: Mapped["DiscordAccount"] = relationship("DiscordAccount")
+    discord: Mapped["DiscordAccount"] = relationship(back_populates="link_request_tokens")

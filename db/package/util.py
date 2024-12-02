@@ -1,6 +1,7 @@
 import secrets
 from datetime import datetime, timedelta
 
+import wikidot
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -24,6 +25,15 @@ class IOUtil:
         db.commit()
         db.refresh(discord)
         return discord
+
+    @staticmethod
+    def update_discord_account(db: Session, acc: DiscordAccount,
+                               new_data: schemas.DiscordAccountSchema) -> DiscordAccount:
+        acc.username = new_data.username
+        acc.avatar = new_data.avatar
+        db.commit()
+        db.refresh(acc)
+        return acc
 
     @staticmethod
     def get_wikidot_account(db: Session, wikidot_id: int) -> WikidotAccount | None:
@@ -88,3 +98,18 @@ class IOUtil:
         db.commit()
 
         return token.token
+
+    @staticmethod
+    def update_jp_member(db: Session, client: wikidot.Client, user: WikidotAccount) -> WikidotAccount:
+        site = client.site.get("scp-jp")
+        is_member = site.member_lookup(user.username, user.wikidot_id)
+        if is_member:
+            user.is_jp_member = True
+            db.commit()
+        else:
+            user.is_jp_member = False
+            db.commit()
+
+        db.refresh(user)
+
+        return user
