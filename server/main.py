@@ -32,7 +32,7 @@ elif env_mode == "production":
 app = FastAPI(**app_params)
 
 origins = [
-    "https://scp-jp.github.com",
+    "https://scp-jp.github.io",
 ]
 
 app.add_middleware(
