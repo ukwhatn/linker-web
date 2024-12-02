@@ -5,7 +5,7 @@ services:
       dockerfile: ./server/Dockerfile
     command: [ "/bin/sh", "-c", "fastapi run main.py --host 0.0.0.0 --port 80 --proxy-headers" ]
     ports:
-      - "127.0.0.1:8000:80"
+      - "127.0.0.1:59103:80"
     volumes:
       - ./server:/app
       - ./db:/app/db

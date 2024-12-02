@@ -1,6 +1,7 @@
 import secrets
 from datetime import datetime, timedelta
 
+import wikidot
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -26,34 +27,43 @@ class IOUtil:
         return discord
 
     @staticmethod
+    def update_discord_account(db: Session, acc: DiscordAccount,
+                               new_data: schemas.DiscordAccountSchema) -> DiscordAccount:
+        acc.username = new_data.username
+        acc.avatar = new_data.avatar
+        db.commit()
+        db.refresh(acc)
+        return acc
+
+    @staticmethod
     def get_wikidot_account(db: Session, wikidot_id: int) -> WikidotAccount | None:
         return db.execute(select(WikidotAccount).where(WikidotAccount.wikidot_id == wikidot_id)).scalars().first()
 
     @staticmethod
     def create_wikidot_account(db: Session, acc: schemas.WikidotAccountSchema) -> WikidotAccount:
-        wikidot = WikidotAccount(
+        wd_acc = WikidotAccount(
             wikidot_id=acc.id,
             username=acc.username,
             unixname=acc.unixname
         )
-        db.add(wikidot)
+        db.add(wd_acc)
         db.commit()
-        db.refresh(wikidot)
-        return wikidot
+        db.refresh(wd_acc)
+        return wd_acc
 
     @staticmethod
-    def create_link(db: Session, discord: DiscordAccount, wikidot: WikidotAccount) -> LinkedAccount:
+    def create_link(db: Session, dc_acc: DiscordAccount, wd_acc: WikidotAccount) -> LinkedAccount | None:
         # 存在チェック
         link = db.execute(select(LinkedAccount).where(
-            LinkedAccount.discord_id == discord.discord_id,
-            LinkedAccount.wikidot_id == wikidot.wikidot_id
+            LinkedAccount.discord_id == dc_acc.discord_id,
+            LinkedAccount.wikidot_id == wd_acc.wikidot_id
         )).scalars().first()
         if link is not None:
             return None
 
         link = LinkedAccount(
-            discord=discord,
-            wikidot=wikidot
+            discord=dc_acc,
+            wikidot=wd_acc
         )
         db.add(link)
         db.commit()
@@ -75,7 +85,7 @@ class IOUtil:
     @staticmethod
     def start_flow(db: Session, acc: schemas.DiscordAccountSchema) -> LinkRequestToken:
         print(acc)
-        discord_account = IOUtil.get_discord_account(db, acc.id)
+        discord_account = IOUtil.get_discord_account(db, int(acc.id))
         if discord_account is None:
             discord_account = IOUtil.create_discord_account(db, acc)
 
@@ -88,3 +98,12 @@ class IOUtil:
         db.commit()
 
         return token.token
+
+    @staticmethod
+    def update_jp_member(db: Session, client: wikidot.Client, user: WikidotAccount) -> WikidotAccount:
+        site = client.site.get("scp-jp")
+        user.is_jp_member = site.member_lookup(user.username, user.wikidot_id)
+        db.commit()
+        db.refresh(user)
+
+        return user
