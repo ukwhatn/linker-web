@@ -3,7 +3,7 @@ from pydantic import BaseModel
 
 class DiscordAccountSchema(BaseModel):
     """Discordアカウントのスキーマ"""
-    id: int
+    id: str
     username: str
     avatar: str
 
@@ -54,9 +54,9 @@ class FlowRecheckResponseSchema(AccountResponseFromDiscordSchema):
 
 class AccountListRequestSchema(BaseModel):
     """AccountCheckのリクエスト"""
-    discord_ids: list[int]
+    discord_ids: list[str]
 
 
 class AccountListResponseSchema(BaseModel):
     """AccountCheckのレスポンス"""
-    result: dict[int, AccountResponseFromDiscordSchema]
+    result: dict[str, AccountResponseFromDiscordSchema]

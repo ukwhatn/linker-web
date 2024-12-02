@@ -280,7 +280,7 @@ async def flow_recheck(
 
     return defined_schemas.FlowRecheckResponseSchema(
         discord=defined_schemas.DiscordAccountSchema(
-            id=discord_acc.discord_id,
+            id=str(discord_acc.discord_id),
             username=discord_acc.username,
             avatar=discord_acc.avatar
         ),
@@ -300,13 +300,13 @@ def account_list(
 
     results = []
     for discord_id in req_data.discord_ids:
-        discord_acc = IOUtil.get_discord_account(db, discord_id)
+        discord_acc = IOUtil.get_discord_account(db, int(discord_id))
         if discord_acc is None:
             continue
 
         results.append(defined_schemas.AccountResponseFromDiscordSchema(
             discord=defined_schemas.DiscordAccountSchema(
-                id=discord_acc.discord_id,
+                id=str(discord_acc.discord_id),
                 username=discord_acc.username,
                 avatar=discord_acc.avatar
             ),

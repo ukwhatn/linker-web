@@ -41,29 +41,29 @@ class IOUtil:
 
     @staticmethod
     def create_wikidot_account(db: Session, acc: schemas.WikidotAccountSchema) -> WikidotAccount:
-        wikidot = WikidotAccount(
+        wd_acc = WikidotAccount(
             wikidot_id=acc.id,
             username=acc.username,
             unixname=acc.unixname
         )
-        db.add(wikidot)
+        db.add(wd_acc)
         db.commit()
-        db.refresh(wikidot)
-        return wikidot
+        db.refresh(wd_acc)
+        return wd_acc
 
     @staticmethod
-    def create_link(db: Session, discord: DiscordAccount, wikidot: WikidotAccount) -> LinkedAccount:
+    def create_link(db: Session, dc_acc: DiscordAccount, wd_acc: WikidotAccount) -> LinkedAccount | None:
         # 存在チェック
         link = db.execute(select(LinkedAccount).where(
-            LinkedAccount.discord_id == discord.discord_id,
-            LinkedAccount.wikidot_id == wikidot.wikidot_id
+            LinkedAccount.discord_id == dc_acc.discord_id,
+            LinkedAccount.wikidot_id == wd_acc.wikidot_id
         )).scalars().first()
         if link is not None:
             return None
 
         link = LinkedAccount(
-            discord=discord,
-            wikidot=wikidot
+            discord=dc_acc,
+            wikidot=wd_acc
         )
         db.add(link)
         db.commit()
@@ -85,7 +85,7 @@ class IOUtil:
     @staticmethod
     def start_flow(db: Session, acc: schemas.DiscordAccountSchema) -> LinkRequestToken:
         print(acc)
-        discord_account = IOUtil.get_discord_account(db, acc.id)
+        discord_account = IOUtil.get_discord_account(db, int(acc.id))
         if discord_account is None:
             discord_account = IOUtil.create_discord_account(db, acc)
 
