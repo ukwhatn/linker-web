@@ -1686,18 +1686,18 @@ files = [
 
 [[package]]
 name = "wikidot"
-version = "3.1.0.dev8"
+version = "3.1.0.dev9"
 description = "Wikidot Utility Library"
 optional = false
 python-versions = ">=3.10"
 files = [
-    {file = "wikidot-3.1.0.dev8-py3-none-any.whl", hash = "sha256:9dbb962b7b6cc358edd6ea48451065a4e2ba5fe9813fd2ebb936eed427096c74"},
-    {file = "wikidot-3.1.0.dev8.tar.gz", hash = "sha256:78cba336932882c183a80aa6f656cadad10272c1388c72f7810906f230c26d57"},
+    {file = "wikidot-3.1.0.dev9-py3-none-any.whl", hash = "sha256:d4dbaeaa3c3a73903274a92d05a3003889ad8c1bac12917c98da5f2e1e5f465b"},
+    {file = "wikidot-3.1.0.dev9.tar.gz", hash = "sha256:4d2fa5da6cd21eace3f6bb67424b45c9f3ecc9d5b42ebb40900d998da9a8eac7"},
 ]
 
 [package.dependencies]
 beautifulsoup4 = ">=4.12.2,<4.13.0"
-httpx = ">=0.25,<0.28"
+httpx = ">=0.25,<0.29"
 lxml = ">=4.9.3,<5.4.0"
 
 [package.extras]
@@ -1708,4 +1708,4 @@ lint = ["flake8", "isort", "mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "a60a4175a054649490680ab04f3dd2e111fa33b060e1442416d1e4460d1ffe6b"
+content-hash = "bae20b918e26f005640d38b0e8eb0ab02f7002a7a017ab198efa89851c32fa37"
