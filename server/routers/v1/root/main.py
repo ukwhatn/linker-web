@@ -298,25 +298,22 @@ def account_list(
     if not check_api_key(request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    results = []
-    for discord_id in req_data.discord_ids:
-        discord_acc = IOUtil.get_discord_account(db, int(discord_id))
-        if discord_acc is None:
-            continue
+    discord_ids = [int(discord_id) for discord_id in req_data.discord_ids]
+    discord_accounts = IOUtil.get_some_discord_accounts(db, discord_ids)
 
-        results.append(defined_schemas.AccountResponseFromDiscordSchema(
-            discord=defined_schemas.DiscordAccountSchema(
-                id=str(discord_acc.discord_id),
-                username=discord_acc.username,
-                avatar=discord_acc.avatar
-            ),
-            wikidot=[defined_schemas.AccountResponseWikidotBaseSchema(
-                id=a.wikidot.wikidot_id,
-                username=a.wikidot.username,
-                unixname=a.wikidot.unixname,
-                is_jp_member=a.wikidot.is_jp_member
-            ) for a in discord_acc.get_linked_accounts()]
-        ))
+    results = [defined_schemas.AccountResponseFromDiscordSchema(
+        discord=defined_schemas.DiscordAccountSchema(
+            id=str(discord_acc.discord_id),
+            username=discord_acc.username,
+            avatar=discord_acc.avatar
+        ),
+        wikidot=[defined_schemas.AccountResponseWikidotBaseSchema(
+            id=a.wikidot.wikidot_id,
+            username=a.wikidot.username,
+            unixname=a.wikidot.unixname,
+            is_jp_member=a.wikidot.is_jp_member
+        ) for a in discord_acc.get_linked_accounts()]
+    ) for discord_acc in discord_accounts]
 
     return defined_schemas.AccountListResponseSchema(
         result={r.discord.id: r for r in results}

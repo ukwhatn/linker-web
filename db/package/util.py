@@ -2,7 +2,7 @@ import secrets
 from datetime import datetime, timedelta
 
 import wikidot
-from sqlalchemy import select
+from sqlalchemy import select, ScalarResult
 from sqlalchemy.orm import Session, joinedload
 
 from . import schemas
@@ -20,6 +20,17 @@ class IOUtil:
             )
             .where(DiscordAccount.discord_id == discord_id)
         ).scalars().first()
+
+    @staticmethod
+    def get_some_discord_accounts(db: Session, discord_ids: list[int]) -> ScalarResult[DiscordAccount]:
+        return db.execute(
+            select(DiscordAccount)
+            .options(
+                joinedload(DiscordAccount.linked_accounts)
+                .joinedload(LinkedAccount.wikidot)
+            )
+            .where(DiscordAccount.discord_id.in_(discord_ids))
+        ).scalars().unique()
 
     @staticmethod
     def create_discord_account(db: Session, acc: schemas.DiscordAccountSchema) -> DiscordAccount:
