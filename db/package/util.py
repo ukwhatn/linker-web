@@ -135,7 +135,7 @@ class IOUtil:
                 joinedload(DiscordAccount.linked_accounts)
                 .joinedload(LinkedAccount.wikidot)
             )
-        ).scalars().all()
+        ).scalars().unique()
 
     @staticmethod
     def get_wikidot_accounts(db: Session):
@@ -145,7 +145,7 @@ class IOUtil:
                 joinedload(WikidotAccount.linked_accounts)
                 .joinedload(LinkedAccount.discord)
             )
-        ).scalars().all()
+        ).scalars().unique()
 
     @staticmethod
     def unlink(db: Session, discord_id: int, wikidot_id: int):
