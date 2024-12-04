@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import wikidot
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from . import schemas
 from .models import DiscordAccount, WikidotAccount, LinkedAccount, LinkRequestToken
@@ -12,7 +12,14 @@ from .models import DiscordAccount, WikidotAccount, LinkedAccount, LinkRequestTo
 class IOUtil:
     @staticmethod
     def get_discord_account(db: Session, discord_id: int) -> DiscordAccount | None:
-        return db.execute(select(DiscordAccount).where(DiscordAccount.discord_id == discord_id)).scalars().first()
+        return db.execute(
+            select(DiscordAccount)
+            .options(
+                joinedload(DiscordAccount.linked_accounts)
+                .joinedload(LinkedAccount.wikidot)
+            )
+            .where(DiscordAccount.discord_id == discord_id)
+        ).scalars().first()
 
     @staticmethod
     def create_discord_account(db: Session, acc: schemas.DiscordAccountSchema) -> DiscordAccount:
@@ -37,7 +44,14 @@ class IOUtil:
 
     @staticmethod
     def get_wikidot_account(db: Session, wikidot_id: int) -> WikidotAccount | None:
-        return db.execute(select(WikidotAccount).where(WikidotAccount.wikidot_id == wikidot_id)).scalars().first()
+        return db.execute(
+            select(WikidotAccount)
+            .options(
+                joinedload(WikidotAccount.linked_accounts)
+                .joinedload(LinkedAccount.discord)
+            )
+            .where(WikidotAccount.wikidot_id == wikidot_id)
+        ).scalars().first()
 
     @staticmethod
     def create_wikidot_account(db: Session, acc: schemas.WikidotAccountSchema) -> WikidotAccount:
@@ -115,11 +129,23 @@ class IOUtil:
 
     @staticmethod
     def get_discord_accounts(db: Session):
-        return db.execute(select(DiscordAccount)).scalars().all()
+        return db.execute(
+            select(DiscordAccount)
+            .options(
+                joinedload(DiscordAccount.linked_accounts)
+                .joinedload(LinkedAccount.wikidot)
+            )
+        ).scalars().all()
 
     @staticmethod
     def get_wikidot_accounts(db: Session):
-        return db.execute(select(WikidotAccount)).scalars().all()
+        return db.execute(
+            select(WikidotAccount)
+            .options(
+                joinedload(WikidotAccount.linked_accounts)
+                .joinedload(LinkedAccount.discord)
+            )
+        ).scalars().all()
 
     @staticmethod
     def unlink(db: Session, discord_id: int, wikidot_id: int):
