@@ -15,7 +15,7 @@ jobs:
         make envs:setup
 
     - name: Build and start services
-      run: make up
+      run: make up ENV=stg
 
     - name: Wait for services to be ready
       run: |
