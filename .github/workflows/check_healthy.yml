@@ -50,4 +50,4 @@ jobs:
         fi
 
     - name: Clean up
-      run: make down
+      run: make down ENV=stg
