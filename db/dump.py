@@ -1,6 +1,7 @@
 import logging
 import os
 import subprocess
+import sys
 import time
 from datetime import datetime, timedelta
 from typing import List
@@ -178,15 +179,24 @@ def create_backup():
 
 def main():
     LOGGER.info(f"Starting backup service for directory: {BACKUP_DIR}/")
-    LOGGER.info(f"Retention period: {BACKUP_RETENTION_DAYS} days")
-    LOGGER.info(f"Scheduled backup time: {BACKUP_TIME}")
 
-    # 指定された時刻にバックアップを実行
-    schedule.every().day.at(BACKUP_TIME).do(create_backup)
+    # 第1引数取得
+    arg1 = sys.argv[1] if len(sys.argv) > 1 else None
 
-    while True:
-        schedule.run_pending()
-        time.sleep(30)
+    if arg1 == "oneshot":
+        LOGGER.info(f"Running oneshot backup")
+        create_backup()
+        return
+    else:
+        LOGGER.info(f"Retention period: {BACKUP_RETENTION_DAYS} days")
+        LOGGER.info(f"Scheduled backup time: {BACKUP_TIME}")
+
+        # 指定された時刻にバックアップを実行
+        schedule.every().day.at(BACKUP_TIME).do(create_backup)
+
+        while True:
+            schedule.run_pending()
+            time.sleep(30)
 
 
 if __name__ == "__main__":
