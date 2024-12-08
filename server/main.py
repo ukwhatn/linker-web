@@ -1,6 +1,7 @@
 import json
 import logging
 
+import sentry_sdk
 from fastapi import FastAPI, Request, Response, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -17,6 +18,17 @@ env_mode = get_env("ENV_MODE", "production")
 # logger config
 logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger("uvicorn")
+
+# sentry
+SENTRY_DSN = get_env("SENTRY_DSN", None)
+if SENTRY_DSN is not None:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=1.0,
+        _experiments={
+            "continuous_profiling_auto_start": True,
+        }
+    )
 
 
 # /system/healthcheckのログを表示しない

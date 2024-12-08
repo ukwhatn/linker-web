@@ -7,6 +7,7 @@ from typing import List
 
 import boto3
 import schedule
+import sentry_sdk
 from botocore.exceptions import ClientError
 
 # S3設定
@@ -29,6 +30,14 @@ DB_PASSWORD = os.environ['POSTGRES_PASSWORD']
 # ロガー
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
+
+# Sentry
+SENTRY_DSN = os.environ.get('SENTRY_DSN', None)
+if SENTRY_DSN is not None:
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        traces_sample_rate=1.0
+    )
 
 
 def get_s3_client():
