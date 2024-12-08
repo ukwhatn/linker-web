@@ -241,12 +241,11 @@
             ]
         }));
 
-        // Update the table data
         discordTable.destroy();
         document.querySelector('#discord-table tbody').innerHTML = '';
 
         window.discordTable = new simpleDatatables.DataTable('#discord-table', {
-            ...TABLE_CONFIG,  // 共通設定を展開
+            ...TABLE_CONFIG,
             data: {
                 headings: ['Discord User', 'Linked Wikidot Accounts'],
                 data: rows.map(row => row.data)
@@ -269,12 +268,11 @@
             ]
         }));
 
-        // Update the table data
         wikidotTable.destroy();
         document.querySelector('#wikidot-table tbody').innerHTML = '';
 
         window.wikidotTable = new simpleDatatables.DataTable('#wikidot-table', {
-            ...TABLE_CONFIG,  // 共通設定を展開
+            ...TABLE_CONFIG,
             data: {
                 headings: ['Wikidot User', 'Unix Name', 'JP Member', 'Linked Discord Accounts'],
                 data: rows.map(row => row.data)
