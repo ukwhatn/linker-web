@@ -42,7 +42,7 @@ app = FastAPI(**app_params)
 
 origins = [
     "https://scp-jp.github.io",
-    "http://localhost:3000"
+    "https://localhost:3000"
 ]
 
 app.add_middleware(
