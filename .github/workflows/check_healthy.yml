@@ -34,7 +34,7 @@ jobs:
           
           if [ $i -eq $max_retries ]; then
             echo "Services did not finish starting within the allocated time."
-            make logs:once
+            make logs:once ENV=stg
             exit 1
           fi
         done
@@ -42,7 +42,7 @@ jobs:
         if make ps | grep -q "unhealthy"; then
           echo "Some services are unhealthy:"
           make ps
-          make logs:once
+          make logs:once ENV=stg
           exit 1
         else
           echo "All services are healthy!"
