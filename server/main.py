@@ -72,6 +72,7 @@ def error_response(request: Request, call_next):
     try:
         response = call_next(request)
     except Exception as e:
+        sentry_sdk.capture_exception(e)
         logger.error(e)
     return response
 

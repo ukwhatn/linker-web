@@ -61,10 +61,12 @@ def ensure_backup_directory(s3_client):
                 s3_client.put_object(Bucket=S3_BUCKET, Key=f'{BACKUP_DIR}/')
                 LOGGER.info(f"Created backup directory: {BACKUP_DIR}/")
             except Exception as create_error:
-                LOGGER.info(f"Error creating backup directory: {str(create_error)}")
+                sentry_sdk.capture_exception(create_error)
+                LOGGER.error(f"Error creating backup directory: {str(create_error)}")
                 raise
         else:
-            LOGGER.info(f"Error checking backup directory: {str(e)}")
+            sentry_sdk.capture_exception(e)
+            LOGGER.error(f"Error checking backup directory: {str(e)}")
             raise
 
 
@@ -81,6 +83,7 @@ def list_old_backups(s3_client) -> List[str]:
                 continue
 
             for obj in page['Contents']:
+                filename = ''
                 try:
                     filename = obj['Key']
                     # バックアップファイルのみを対象とする
@@ -92,12 +95,14 @@ def list_old_backups(s3_client) -> List[str]:
 
                     if file_date < cutoff_date:
                         old_backups.append(filename)
-                except (IndexError, ValueError):
-                    LOGGER.info(f"Warning: Could not parse date from filename: {filename}")
+                except (IndexError, ValueError) as e:
+                    sentry_sdk.capture_exception(e)
+                    LOGGER.error(f"Warning: Could not parse date from filename: {filename}")
                     continue
 
     except Exception as e:
-        LOGGER.info(f"Error listing old backups: {str(e)}")
+        sentry_sdk.capture_exception(e)
+        LOGGER.error(f"Error listing old backups: {str(e)}")
 
     return old_backups
 
@@ -115,7 +120,8 @@ def delete_old_backups(s3_client, old_backups: List[str]):
         )
         LOGGER.info(f"Deleted {len(old_backups)} old backup(s) from {BACKUP_DIR}/")
     except Exception as e:
-        LOGGER.info(f"Error deleting old backups: {str(e)}")
+        sentry_sdk.capture_exception(e)
+        LOGGER.error(f"Error deleting old backups: {str(e)}")
 
 
 def create_backup():
@@ -136,8 +142,9 @@ def create_backup():
             ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
             LOGGER.info(run.stdout)
         except subprocess.CalledProcessError as e:
-            LOGGER.info(f'Error running pg_dump: {e.stderr}')
-            LOGGER.info(f'pg_dump output: {e.stdout}')
+            sentry_sdk.capture_exception(e)
+            LOGGER.error(f'Error running pg_dump: {e.stderr}')
+            LOGGER.error(f'pg_dump output: {e.stdout}')
             raise e
 
         # S3クライアントの初期化
@@ -165,7 +172,8 @@ def create_backup():
         os.remove(backup_file)
 
     except Exception as e:
-        LOGGER.info(f'Backup failed: {str(e)}')
+        sentry_sdk.capture_exception(e)
+        LOGGER.error(f'Backup failed: {str(e)}')
 
 
 def main():
