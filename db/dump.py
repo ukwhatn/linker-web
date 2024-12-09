@@ -9,8 +9,8 @@ from typing import List, Optional
 import boto3
 import schedule
 import sentry_sdk
-from pick import pick
 from botocore.exceptions import ClientError
+from pick import pick
 
 # S3設定
 S3_ENDPOINT = os.environ['S3_ENDPOINT']
