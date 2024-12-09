@@ -16,7 +16,7 @@ WORKDIR /app
 # install libpq
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y libpq-dev && \
+    apt install -y libpq-dev postgresql-common && \
     apt clean
 
 # copy from builder

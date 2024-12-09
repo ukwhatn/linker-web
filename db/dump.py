@@ -82,8 +82,6 @@ def get_backup_files(s3_client) -> List[Tuple[str, datetime]]:
             if 'Contents' not in page:
                 continue
 
-            filename = 'undefined'
-
             for obj in page['Contents']:
                 try:
                     filename = obj['Key']
@@ -164,7 +162,7 @@ def delete_old_backups(s3_client, old_backups: List[str]):
 def restore_backup(backup_key: str):
     """バックアップをレストア"""
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    temp_file = f'/tmp/restore_{timestamp}.tar'
+    temp_file = f'/tmp/restore_{timestamp}.sql'
 
     try:
         # S3からファイルをダウンロード
@@ -177,19 +175,47 @@ def restore_backup(backup_key: str):
 
         LOGGER.info(f"Downloaded backup file: {backup_key}")
 
+        # pg_restoreを実行
         try:
-            # バックアップを実行
-            create_backup()
+            # 既存の接続を切断
+            disconnect_cmd = f"""
+            SELECT pg_terminate_backend(pid) 
+            FROM pg_stat_activity 
+            WHERE datname = '{DB_NAME}'
+            AND pid <> pg_backend_pid();
+            """
 
-            # pg_restoreを使用してレストア実行
-            run = subprocess.run([
-                'pg_restore',
+            subprocess.run([
+                'psql',
                 f'--host={DB_HOST}',
                 f'--dbname=postgres',  # postgresデータベースに接続
                 f'--username={DB_USER}',
-                '--clean',  # クリーンアップを実行
-                '--if-exists',  # 既存のオブジェクトが存在する場合は削除
-                temp_file
+                '-c', disconnect_cmd
+            ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
+
+            # データベースを再作成
+            subprocess.run([
+                'dropdb',
+                f'--host={DB_HOST}',
+                f'--username={DB_USER}',
+                '--if-exists',
+                DB_NAME
+            ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
+
+            subprocess.run([
+                'createdb',
+                f'--host={DB_HOST}',
+                f'--username={DB_USER}',
+                DB_NAME
+            ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
+
+            # レストア実行
+            run = subprocess.run([
+                'psql',
+                f'--host={DB_HOST}',
+                f'--dbname={DB_NAME}',
+                f'--username={DB_USER}',
+                '-f', temp_file
             ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
 
             LOGGER.info(f"Restore completed successfully")
@@ -213,17 +239,17 @@ def restore_backup(backup_key: str):
 def create_backup():
     """バックアップを作成してS3にアップロード"""
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    backup_file = f'/tmp/backup_{timestamp}.tar'
+    backup_file = f'/tmp/backup_{timestamp}.sql'
 
     try:
-        # pg_dumpを実行（カスタム形式でデータのみ）
+        # pg_dumpを実行（データのみ）
         try:
             run = subprocess.run([
                 'pg_dump',
                 f'--host={DB_HOST}',
                 f'--dbname={DB_NAME}',
                 f'--username={DB_USER}',
-                '--format=tar',
+                '--format=plain',
                 f'--file={backup_file}'
             ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
             LOGGER.info(run.stdout)
@@ -240,7 +266,7 @@ def create_backup():
         ensure_backup_directory(s3_client)
 
         # S3にアップロード
-        s3_key = f'{BACKUP_DIR}/backup_{timestamp}.tar'
+        s3_key = f'{BACKUP_DIR}/backup_{timestamp}.sql'
         s3_client.upload_file(
             backup_file,
             S3_BUCKET,
@@ -296,6 +322,7 @@ def main():
         confirm_option, _ = pick(confirm_options, confirm_title)
 
         if confirm_option == 'Yes':
+            create_backup()
             restore_backup(selected_key)
         else:
             LOGGER.info("Restore cancelled")
