@@ -4,7 +4,7 @@ import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
-from typing import List, Tuple
+from typing import List, Optional
 
 import boto3
 import schedule
@@ -72,39 +72,28 @@ def ensure_backup_directory(s3_client):
             raise
 
 
-def get_backup_files(s3_client) -> List[Tuple[str, datetime]]:
+def list_backup_files(s3_client) -> List[str]:
     """バックアップファイルの一覧を取得"""
     backup_files = []
-
     try:
         paginator = s3_client.get_paginator('list_objects_v2')
         for page in paginator.paginate(Bucket=S3_BUCKET, Prefix=f'{BACKUP_DIR}/backup_'):
             if 'Contents' not in page:
                 continue
 
-            filename = 'undefined'
-
             for obj in page['Contents']:
-                try:
-                    filename = obj['Key']
-                    if not filename.startswith(f'{BACKUP_DIR}/backup_'):
-                        continue
+                filename = obj['Key']
+                if filename.startswith(f'{BACKUP_DIR}/backup_') and filename.endswith('.sql'):
+                    backup_files.append(filename)
 
-                    date_str = filename.split('_')[1]
-                    time_str = filename.split('_')[2].split('.')[0]
-                    dt = datetime.strptime(f"{date_str}_{time_str}", '%Y%m%d_%H%M%S')
-                    backup_files.append((filename, dt))
-                except (IndexError, ValueError) as e:
-                    sentry_sdk.capture_exception(e)
-                    LOGGER.error(f"Warning: Could not parse date from filename: {filename}")
-                    continue
-
+        # 日付順に並び替え（新しい順）
+        backup_files.sort(reverse=True)
     except Exception as e:
         sentry_sdk.capture_exception(e)
         LOGGER.error(f"Error listing backup files: {str(e)}")
+        raise
 
-    # 日付の新しい順にソート
-    return sorted(backup_files, key=lambda x: x[1], reverse=True)
+    return backup_files
 
 
 def list_old_backups(s3_client) -> List[str]:
@@ -161,69 +150,54 @@ def delete_old_backups(s3_client, old_backups: List[str]):
         LOGGER.error(f"Error deleting old backups: {str(e)}")
 
 
-def restore_backup(backup_key: str):
-    """バックアップをレストア"""
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    temp_file = f'/tmp/restore_{timestamp}.tar'
-
+def select_backup_file() -> Optional[str]:
+    """バックアップファイルを選択"""
     try:
-        # S3からファイルをダウンロード
         s3_client = get_s3_client()
-        s3_client.download_file(
-            S3_BUCKET,
-            backup_key,
-            temp_file
-        )
+        backup_files = list_backup_files(s3_client)
 
-        LOGGER.info(f"Downloaded backup file: {backup_key}")
+        if not backup_files:
+            LOGGER.error("No backup files found")
+            return None
 
-        try:
-            # バックアップを実行
-            create_backup()
+        # ファイル名から日時部分を抽出して表示用の文字列を作成
+        display_options = []
+        for filename in backup_files:
+            try:
+                # backup_YYYYMMDD_HHMMSS.sql の形式から日時を抽出
+                date_str = filename.split('_')[1]
+                time_str = filename.split('_')[2].split('.')[0]
+                display_date = f"{date_str[:4]}/{date_str[4:6]}/{date_str[6:]} {time_str[:2]}:{time_str[2:4]}:{time_str[4:]}"
+                display_options.append(f"{display_date} - {filename}")
+            except IndexError:
+                display_options.append(filename)
 
-            # pg_restoreを使用してレストア実行
-            run = subprocess.run([
-                'pg_restore',
-                f'--host={DB_HOST}',
-                f'--dbname=postgres',  # postgresデータベースに接続
-                f'--username={DB_USER}',
-                '--clean',  # クリーンアップを実行
-                '--if-exists',  # 既存のオブジェクトが存在する場合は削除
-                temp_file
-            ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
+        title = 'Please select a backup file to restore (↑↓ to move, Enter to select):'
+        selected_option, _ = pick(display_options, title)
 
-            LOGGER.info(f"Restore completed successfully")
-            LOGGER.debug(run.stdout)
-
-        except subprocess.CalledProcessError as e:
-            sentry_sdk.capture_exception(e)
-            LOGGER.error(f'Error during restore: {e.stderr}')
-            LOGGER.error(f'Restore output: {e.stdout}')
-            raise e
+        # 選択された表示用文字列からファイル名を抽出
+        return selected_option.split(' - ')[-1]
 
     except Exception as e:
         sentry_sdk.capture_exception(e)
-        LOGGER.error(f'Restore failed: {str(e)}')
-    finally:
-        # 一時ファイルを削除
-        if os.path.exists(temp_file):
-            os.remove(temp_file)
+        LOGGER.error(f"Error selecting backup file: {str(e)}")
+        return None
 
 
 def create_backup():
     """バックアップを作成してS3にアップロード"""
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-    backup_file = f'/tmp/backup_{timestamp}.tar'
+    backup_file = f'/tmp/backup_{timestamp}.sql'
 
     try:
-        # pg_dumpを実行（カスタム形式でデータのみ）
+        # pg_dumpを実行
         try:
             run = subprocess.run([
                 'pg_dump',
                 f'--host={DB_HOST}',
                 f'--dbname={DB_NAME}',
                 f'--username={DB_USER}',
-                '--format=tar',
+                '--format=plain',
                 f'--file={backup_file}'
             ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
             LOGGER.info(run.stdout)
@@ -240,7 +214,7 @@ def create_backup():
         ensure_backup_directory(s3_client)
 
         # S3にアップロード
-        s3_key = f'{BACKUP_DIR}/backup_{timestamp}.tar'
+        s3_key = f'{BACKUP_DIR}/backup_{timestamp}.sql'
         s3_client.upload_file(
             backup_file,
             S3_BUCKET,
@@ -262,48 +236,94 @@ def create_backup():
         LOGGER.error(f'Backup failed: {str(e)}')
 
 
-def main():
-    LOGGER.info(f"Starting backup service for directory: {BACKUP_DIR}/")
+def restore_backup(backup_file: str):
+    """バックアップをリストア"""
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    local_file = f'/tmp/restore_{timestamp}.sql'
 
-    # コマンドライン引数の取得
+    try:
+        # S3からファイルをダウンロード
+        s3_client = get_s3_client()
+        LOGGER.info(f"Downloading backup file: {backup_file}")
+        s3_client.download_file(S3_BUCKET, backup_file, local_file)
+
+        # データベースに接続してリストアを実行
+        LOGGER.info("Starting database restore...")
+        try:
+            # まず既存の接続を切断
+            disconnect_cmd = f"SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '{DB_NAME}' AND pid <> pg_backend_pid();"
+            subprocess.run([
+                'psql',
+                f'--host={DB_HOST}',
+                f'--dbname={DB_NAME}',
+                f'--username={DB_USER}',
+                '-c', disconnect_cmd
+            ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True)
+
+            # データベースを再作成
+            subprocess.run([
+                'psql',
+                f'--host={DB_HOST}',
+                '--dbname=postgres',
+                f'--username={DB_USER}',
+                '-c', f'DROP DATABASE IF EXISTS {DB_NAME};'
+            ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True)
+
+            subprocess.run([
+                'psql',
+                f'--host={DB_HOST}',
+                '--dbname=postgres',
+                f'--username={DB_USER}',
+                '-c', f'CREATE DATABASE {DB_NAME};'
+            ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True)
+
+            # バックアップを復元
+            restore_result = subprocess.run([
+                'psql',
+                f'--host={DB_HOST}',
+                f'--dbname={DB_NAME}',
+                f'--username={DB_USER}',
+                '-f', local_file
+            ], env={'PGPASSWORD': DB_PASSWORD}, check=True, capture_output=True, text=True)
+
+            LOGGER.info("Database restore completed successfully")
+
+        except subprocess.CalledProcessError as e:
+            sentry_sdk.capture_exception(e)
+            LOGGER.error(f"Error during database restore: {e.stderr}")
+            raise
+
+    except Exception as e:
+        sentry_sdk.capture_exception(e)
+        LOGGER.error(f"Restore failed: {str(e)}")
+        raise
+    finally:
+        # 一時ファイルを削除
+        if os.path.exists(local_file):
+            os.remove(local_file)
+
+
+def main():
+    LOGGER.info(f"Starting backup/restore service for directory: {BACKUP_DIR}/")
+
+    # 第1引数取得
     arg1 = sys.argv[1] if len(sys.argv) > 1 else None
 
     if arg1 == "oneshot":
-        LOGGER.info(f"Running oneshot backup")
+        LOGGER.info("Running oneshot backup")
         create_backup()
-        return
     elif arg1 == "restore":
         LOGGER.info("Starting restore process")
-        s3_client = get_s3_client()
-        backup_files = get_backup_files(s3_client)
-
-        if not backup_files:
-            LOGGER.error("No backup files found")
-            return
-
-        # バックアップファイルの選択
-        title = 'Please select a backup file to restore:'
-        options = [f"{dt.strftime('%Y-%m-%d %H:%M:%S')} - {key}" for key, dt in backup_files]
-        option, index = pick(options, title)
-
-        # 選択されたファイルのレストア
-        selected_key = backup_files[index][0]
-        LOGGER.info(f"Selected backup file: {selected_key}")
-
-        # 確認
-        confirm_title = f'Are you sure you want to restore {selected_key}? This will DELETE ALL EXISTING DATA!'
-        confirm_options = ['Yes', 'No']
-        confirm_option, _ = pick(confirm_options, confirm_title)
-
-        if confirm_option == 'Yes':
-            restore_backup(selected_key)
+        backup_file = select_backup_file()
+        if backup_file:
+            restore_backup(backup_file)
         else:
-            LOGGER.info("Restore cancelled")
-        return
+            LOGGER.error("No backup file selected")
     else:
         LOGGER.info(f"Retention period: {BACKUP_RETENTION_DAYS} days")
         LOGGER.info(f"Scheduled backup time: {BACKUP_TIME}")
 
+        # 指定された時刻にバックアップを実行
         schedule.every().day.at(BACKUP_TIME).do(create_backup)
 
         while True:
