@@ -79,6 +79,11 @@ envs\:setup:
 	cp envs/server.env.example envs/server.env
 
 db\:backup:
-	docker compose -f $(COMPOSE_YML) exec db-dumper python dump.py oneshot
+	docker compose -f compose.prod.yml up -d --build db-dumper
+	docker compose -f compose.prod.yml exec db-dumper python dump.py oneshot
+
+db\:restore:
+	docker compose -f compose.prod.yml up -d --build db-dumper
+	docker compose -f compose.prod.yml exec db-dumper python dump.py restore
 
 PHONY: build up down logs ps pr\:create deploy\:prod poetry\:install poetry\:add poetry\:lock poetry\:update poetry\:reset dev\:setup db\:revision\:create db\:migrate envs\:setup
