@@ -16,13 +16,14 @@ WORKDIR /app
 # install libpq
 RUN apt update && \
     apt upgrade -y && \
-    apt install -y libpq-dev postgresql-common && \
+    apt install -y libpq-dev && \
     apt clean
 
 # copy from builder
 COPY --from=builder /usr/bin/make /usr/bin/make
 COPY --from=builder /usr/lib/postgresql/17/bin/pg_dump /usr/bin/pg_dump
 COPY --from=builder /usr/lib/postgresql/17/bin/pg_restore /usr/bin/pg_restore
+COPY --from=builder /usr/lib/libpq.so.* /usr/lib/
 
 # install poetry
 RUN pip install --upgrade pip poetry
