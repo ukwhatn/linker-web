@@ -23,7 +23,6 @@ RUN apt update && \
 COPY --from=builder /usr/bin/make /usr/bin/make
 COPY --from=builder /usr/lib/postgresql/17/bin/pg_dump /usr/bin/pg_dump
 COPY --from=builder /usr/lib/postgresql/17/bin/pg_restore /usr/bin/pg_restore
-COPY --from=builder /usr/lib/libpq.so.* /usr/lib/
 
 # install poetry
 RUN pip install --upgrade pip poetry
