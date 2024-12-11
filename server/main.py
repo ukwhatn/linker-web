@@ -90,12 +90,14 @@ async def session_creator(request: Request, call_next):
         if req_session_data is None:
             req_session_data = SessionSchema()
         request.state.session = req_session_data
+        print(req_session_data)
 
     response = await call_next(request)
 
     with SessionCrud() as session_crud:
         res_session_data = request.state.session
         session_crud.update(request, response, res_session_data)
+        print(res_session_data)
     return response
 
 
