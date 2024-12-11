@@ -13,6 +13,7 @@ from db.package import schemas as defined_schemas
 from db.package.models import WikidotAccount
 from db.package.session import db_context, get_db
 from db.package.util import IOUtil
+from redis_crud.schemas import SessionAuthSchema
 from util.env import get_env
 
 # define router
@@ -138,12 +139,12 @@ def auth(
     code_challenge = create_code_challenge(code_verifier, "S256")
     code_challenge_method = "S256"
 
-    request.state.session.auth = {
-        "discord_id": discord_acc.discord_id,
-        "code_verifier": code_verifier,
-        "code_challenge_method": code_challenge_method,
-        "state": token
-    }
+    request.state.session.auth = SessionAuthSchema(
+        discord_id=discord_acc.discord_id,
+        code_verifier=code_verifier,
+        code_challenge_method=code_challenge_method,
+        state=token
+    )
 
     location = (f"{WD_AUTH_API_URL}/authorize"
                 f"?response_type=code"
@@ -174,15 +175,16 @@ def callback(
             "request": request
         }, status_code=400)
 
-    if state != auth_data["state"]:
+    if state != auth_data.state:
+        request.state.session.auth = None
         return templates.TemplateResponse("error.html", {
             "error_code": "invalid state",
             "request": request
         }, status_code=400)
 
-    code_challenge_method = auth_data["code_challenge_method"]
+    code_challenge_method = auth_data.code_challenge_method
 
-    code_verifier = auth_data["code_verifier"]
+    code_verifier = auth_data.code_verifier
 
     # get info
     userinfo_request = httpx.post(
@@ -191,13 +193,13 @@ def callback(
             "client_id": WD_AUTH_API_CLIENT_ID,
             "client_secret": WD_AUTH_API_CLIENT_SECRET,
             "code": code,
-            "code_verifier": auth_data["code_verifier"],
+            "code_verifier": auth_data.code_verifier,
             "grant_type": "authorization_code",
             "redirect_uri": f"{LINKER_SITE_URL}/v1/callback"
         })
 
     if userinfo_request.status_code != 200:
-        print(userinfo_request.text)
+        request.state.session.auth = None
         return templates.TemplateResponse("error.html", {
             "error_code": "invalid token",
             "request": request
@@ -210,7 +212,9 @@ def callback(
         unixname=data["unix_name"]
     )
 
-    discord_account = IOUtil.get_discord_account(db, auth_data["discord_id"])
+    discord_account = IOUtil.get_discord_account(db, auth_data.discord_id)
+    request.state.session.auth = None
+
     if discord_account is None:
         return templates.TemplateResponse("error.html", {
             "error_code": "discord id not found",
