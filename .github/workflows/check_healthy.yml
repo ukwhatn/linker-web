@@ -15,7 +15,7 @@ jobs:
         make envs:setup
 
     - name: Build and start services
-      run: make up ENV=stg
+      run: make up ENV=test
 
     - name: Wait for services to be ready
       run: |
@@ -24,7 +24,7 @@ jobs:
         
         for i in $(seq 1 $max_retries)
         do
-          if ! make ps ENV=stg | grep -qE "(health: starting|Restarting)"; then
+          if ! make ps ENV=test | grep -qE "(health: starting|Restarting)"; then
             echo "All services have finished starting!"
             break
           else
@@ -34,20 +34,23 @@ jobs:
           
           if [ $i -eq $max_retries ]; then
             echo "Services did not finish starting within the allocated time."
-            make logs:once ENV=stg
+            make logs:once ENV=test
             exit 1
           fi
         done
         
-        if make ps ENV=stg | grep -q "unhealthy"; then
+        if make ps ENV=test | grep -q "unhealthy"; then
           echo "Some services are unhealthy:"
-          make ps ENV=stg
-          make logs:once ENV=stg
+          make ps ENV=test
+          make logs:once ENV=test
           exit 1
         else
           echo "All services are healthy!"
-          make ps ENV=stg
+          make ps ENV=test
         fi
 
+    - name: Check Dumper service
+      run: make db:backup:test ENV=test
+
     - name: Clean up
-      run: make down ENV=stg
+      run: make down ENV=test
