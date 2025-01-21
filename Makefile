@@ -77,8 +77,9 @@ db\:migrate:
 	docker compose -f $(COMPOSE_YML) run --rm db-migrator /bin/bash -c "alembic upgrade head"
 
 envs\:setup:
-	cp envs/db.env.example envs/db.env
 	cp envs/server.env.example envs/server.env
+	cp envs/db.env.example envs/db.env
+	cp envs/sentry.env.example envs/sentry.env
 
 db\:backup:
 	docker compose -f compose.prod.yml up -d --build db-dumper
