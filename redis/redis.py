@@ -5,10 +5,7 @@ from .schemas import CustomSchemaBase, SessionSchema, SessionAuthSchema
 
 
 class SessionEncoder(json.JSONEncoder):
-    _classes = {
-        "SessionSchema": SessionSchema,
-        "SessionAuthSchema": SessionAuthSchema
-    }
+    _classes = {"SessionSchema": SessionSchema, "SessionAuthSchema": SessionAuthSchema}
 
     def default(self, o):
         if isinstance(o, CustomSchemaBase):
@@ -29,7 +26,7 @@ class SessionEncoder(json.JSONEncoder):
 
 class RedisCrud:
     def __init__(self, db: int):
-        self.connect = redis.Redis(host='redis', port=6379, db=db)
+        self.connect = redis.Redis(host="redis", port=6379, db=db)
 
     def __enter__(self):
         return self
@@ -45,7 +42,9 @@ class RedisCrud:
 
     def set(self, key: str, value: any, expire: int = None):
         if expire is not None:
-            return self.connect.set(key, json.dumps(value.__dict__, cls=SessionEncoder), ex=expire)
+            return self.connect.set(
+                key, json.dumps(value.__dict__, cls=SessionEncoder), ex=expire
+            )
 
         return self.connect.set(key, json.dumps(value.__dict__, cls=SessionEncoder))
 

@@ -27,7 +27,7 @@ if SENTRY_DSN is not None:
         traces_sample_rate=1.0,
         _experiments={
             "continuous_profiling_auto_start": True,
-        }
+        },
     )
 
 
@@ -52,10 +52,7 @@ elif env_mode == "production":
 # create app
 app = FastAPI(**app_params)
 
-origins = [
-    "https://scp-jp.github.io",
-    "https://localhost:3000"
-]
+origins = ["https://scp-jp.github.io", "https://localhost:3000"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -68,7 +65,9 @@ app.add_middleware(
 
 @app.middleware("http")
 def error_response(request: Request, call_next):
-    response = Response(json.dumps({"status": "internal server error"}), status_code=500)
+    response = Response(
+        json.dumps({"status": "internal server error"}), status_code=500
+    )
     try:
         response = call_next(request)
     except Exception as e:
@@ -105,12 +104,6 @@ async def session_creator(request: Request, call_next):
 # app.mount("/static", StaticFiles(directory="/app/static"), name="static")
 
 # add routers
-app.include_router(
-    v1_router.router,
-    prefix="/v1"
-)
+app.include_router(v1_router.router, prefix="/v1")
 
-app.include_router(
-    system_router.router,
-    prefix="/system"
-)
+app.include_router(system_router.router, prefix="/system")
