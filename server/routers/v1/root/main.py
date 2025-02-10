@@ -203,10 +203,6 @@ def callback(
             status_code=400,
         )
 
-    auth_data.code_challenge_method
-
-    auth_data.code_verifier
-
     # get info
     userinfo_request = httpx.post(
         f"{WD_AUTH_API_URL}/user",
@@ -246,6 +242,8 @@ def callback(
     wikidot_account = IOUtil.get_wikidot_account(db, wd_user.id)
     if wikidot_account is None:
         wikidot_account = IOUtil.create_wikidot_account(db, wd_user)
+    else:
+        wikidot_account = IOUtil.update_wikidot_account(db, wikidot_account, wd_user)
 
     background_tasks.add_task(check_jp_member_in_background, wikidot_account.wikidot_id)
 
@@ -293,7 +291,7 @@ async def flow_recheck(
     if not check_api_key(request):
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    discord_acc = IOUtil.get_discord_account(db, req_data.discord.id)
+    discord_acc = IOUtil.get_discord_account(db, int(req_data.discord.id))
     if discord_acc is None:
         raise HTTPException(status_code=404, detail="Not Found")
 
