@@ -28,7 +28,7 @@ class IOUtil:
 
     @staticmethod
     def get_some_discord_accounts(
-        db: Session, discord_ids: list[int]
+            db: Session, discord_ids: list[int]
     ) -> ScalarResult[DiscordAccount]:
         return (
             db.execute(
@@ -46,7 +46,7 @@ class IOUtil:
 
     @staticmethod
     def create_discord_account(
-        db: Session, acc: schemas.DiscordAccountSchema
+            db: Session, acc: schemas.DiscordAccountSchema
     ) -> DiscordAccount:
         discord = DiscordAccount(
             discord_id=acc.id, username=acc.username, avatar=acc.avatar
@@ -58,7 +58,7 @@ class IOUtil:
 
     @staticmethod
     def update_discord_account(
-        db: Session, acc: DiscordAccount, new_data: schemas.DiscordAccountSchema
+            db: Session, acc: DiscordAccount, new_data: schemas.DiscordAccountSchema
     ) -> DiscordAccount:
         acc.username = new_data.username
         acc.avatar = new_data.avatar
@@ -84,7 +84,7 @@ class IOUtil:
 
     @staticmethod
     def create_wikidot_account(
-        db: Session, acc: schemas.WikidotAccountSchema
+            db: Session, acc: schemas.WikidotAccountSchema
     ) -> WikidotAccount:
         wd_acc = WikidotAccount(
             wikidot_id=acc.id, username=acc.username, unixname=acc.unixname
@@ -95,8 +95,23 @@ class IOUtil:
         return wd_acc
 
     @staticmethod
+    def update_wikidot_account(
+            db: Session, acc: WikidotAccount, new_data: schemas.WikidotAccountSchema
+    ) -> WikidotAccount:
+        if acc.id != new_data.id:
+            raise ValueError("Wikidot user id is not match in update_wikidot_account")
+
+        if acc.username != new_data.username or acc.unixname != new_data.unixname:
+            acc.username = new_data.username
+            acc.unixname = new_data.unixname
+            db.commit()
+            db.refresh(acc)
+
+        return acc
+
+    @staticmethod
     def create_link(
-        db: Session, dc_acc: DiscordAccount, wd_acc: WikidotAccount
+            db: Session, dc_acc: DiscordAccount, wd_acc: WikidotAccount
     ) -> LinkedAccount | None:
         # 存在チェック
         link = (
@@ -125,7 +140,7 @@ class IOUtil:
 
     @staticmethod
     def get_discord_account_from_token(
-        db: Session, token: str
+            db: Session, token: str
     ) -> DiscordAccount | None:
         # 10分以内のトークンを取得
         token = (
@@ -163,7 +178,7 @@ class IOUtil:
 
     @staticmethod
     def update_jp_member(
-        db: Session, client: wikidot.Client, user: WikidotAccount
+            db: Session, client: wikidot.Client, user: WikidotAccount
     ) -> WikidotAccount:
         site = client.site.get("scp-jp")
         user.is_jp_member = site.member_lookup(user.username, user.wikidot_id)
