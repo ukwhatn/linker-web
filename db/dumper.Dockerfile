@@ -1,4 +1,4 @@
-FROM python:3.13.3-slim AS builder
+FROM python:3.13.4-slim AS builder
 
 # timezone
 ENV TZ=Asia/Tokyo
