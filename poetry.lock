@@ -1801,25 +1801,26 @@ files = [
 
 [[package]]
 name = "wikidot"
-version = "3.1.0.dev9"
+version = "3.1.0.dev13"
 description = "Wikidot Utility Library"
 optional = false
 python-versions = ">=3.10"
 groups = ["server"]
 files = [
-    {file = "wikidot-3.1.0.dev9-py3-none-any.whl", hash = "sha256:d4dbaeaa3c3a73903274a92d05a3003889ad8c1bac12917c98da5f2e1e5f465b"},
-    {file = "wikidot-3.1.0.dev9.tar.gz", hash = "sha256:4d2fa5da6cd21eace3f6bb67424b45c9f3ecc9d5b42ebb40900d998da9a8eac7"},
+    {file = "wikidot-3.1.0.dev13-py3-none-any.whl", hash = "sha256:f10fe95495b17b7d58f68b1673a2083b9a04a7b2d199da9fa45fa09f6204293a"},
+    {file = "wikidot-3.1.0.dev13.tar.gz", hash = "sha256:36452fbb31f4748f7b5cffcbe5a87f72ae076349164d01b63d129c5a623ea7b0"},
 ]
 
 [package.dependencies]
-beautifulsoup4 = ">=4.12.2,<4.13.0"
+beautifulsoup4 = ">=4.12.2,<4.14.0"
 httpx = ">=0.25,<0.29"
-lxml = ">=4.9.3,<5.4.0"
+lxml = ">=4.9.3,<5.5.0"
 
 [package.extras]
 build = ["build", "twine"]
-format = ["black", "isort"]
-lint = ["flake8", "isort", "mypy"]
+docs = ["myst-parser (>=2.0.0)", "sphinx (>=7.2.6)", "sphinx-autodoc-typehints (>=1.25.3)", "sphinx-intl (>=2.1.0)", "sphinx-rtd-theme (>=2.0.0)"]
+format = ["ruff"]
+lint = ["mypy", "ruff"]
 
 [[package]]
 name = "windows-curses"
@@ -1851,4 +1852,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "be769a3d63def1f784ba2b3265a4a88c4ddb172d8dc11bd7078dee01999802e6"
+content-hash = "c3186c64e166b7dac29e809e3fefb6a9b1d05a40c005e774f8e55ce858cd7ce9"
